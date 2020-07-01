@@ -4,12 +4,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
-import androidx.databinding.Bindable;
-import androidx.databinding.DataBindingUtil;
-import androidx.databinding.ObservableField;
-import androidx.databinding.ViewDataBinding;
-
-import com.aldebaran.qi.Future;
+import com.aldebaran.qi.sdk.Qi;
 import com.aldebaran.qi.sdk.QiContext;
 import com.aldebaran.qi.sdk.QiSDK;
 import com.aldebaran.qi.sdk.RobotLifecycleCallbacks;
@@ -30,12 +25,13 @@ import okhttp3.WebSocketListener;
 public class MainActivity extends RobotActivity implements RobotLifecycleCallbacks {
     QiContext qiContext;
     TextView outputText;
+
     PepperTask task = new PepperTask();
-    Boolean isUpdated = false;
+    Boolean isNewTask = false;
 
     private static class PepperTask {
-        public final ObservableField<String> command = new ObservableField<>();
-        public final ObservableField<String> content = new ObservableField<>();
+        public String command;
+        public String content;
     }
 
     @Override
@@ -58,20 +54,18 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         this.qiContext = qiContext;
 
         // Establishing a connection with the server with Pepper tasks
-        String serverURL = "ws://10.0.2.2:8080/test";
+        String serverURL = "ws://10.0.2.2:8080/pepper/initiate";
         Request request = new Request.Builder().url(serverURL).build();
         PepperTasksListener listener = new PepperTasksListener();
         OkHttpClient client = new OkHttpClient();
         WebSocket webSocket = client.newWebSocket(request, listener);
 
-//        Say say = SayBuilder.with(qiContext).withText(task.content.get()).build();
-//        say.run();
-
         for (;;) {
-            if (isUpdated) {
-                Say say = SayBuilder.with(qiContext).withText(task.content.get()).build();
+            if (isNewTask) {
+                runOnUiThread(() -> outputText.setText(task.command + ": " + task.content));
+                Say say = SayBuilder.with(qiContext).withText(task.content).build();
                 say.run();
-                isUpdated = false;
+                isNewTask = false;
             }
         }
     }
@@ -106,13 +100,10 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
             }
             if (msgJSON != null) {
                 Log.i("WebSocket", msgJSON.toString());
-                String cmd = "", content = "";
                 try {
-                    cmd = msgJSON.getString("Command");
-                    content = msgJSON.getString("Content");
-                    task.command.set(cmd);
-                    task.content.set(content);
-                    isUpdated = true;
+                    task.command = msgJSON.getString("Command");
+                    task.content = msgJSON.getString("Content");
+                    isNewTask = true;
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
