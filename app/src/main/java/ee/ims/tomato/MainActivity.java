@@ -5,6 +5,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.aldebaran.qi.sdk.Qi;
@@ -25,6 +27,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.lang.reflect.Field;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -42,8 +46,13 @@ import okio.Utf8;
 
 public class MainActivity extends RobotActivity implements RobotLifecycleCallbacks {
     QiContext qiContext;
-    TextView outputText;
 
+    // UI
+//    TextView outputText;
+    EditText machineIPInput;
+    TextView serverConnectionStatusText;
+
+    // Internal
     PepperTask task = new PepperTask();
     PepperTask currentSayTask = new PepperTask();
     PepperTask currentMoveTask = new PepperTask();
@@ -54,6 +63,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     String[] allRawResources;
     String allRawResourcesString;
     WebSocket webSocket;
+    String serverURL = "ws://10.0.2.2:8080/pepper/initiate";
 
     private static class PepperTask {
         public String command;
@@ -71,8 +81,10 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         QiSDK.register(this, this);
 
         // some fields for a basic feedback
-        outputText = findViewById(R.id.outputText);
-        outputText.setText("Output goes here.");
+//        outputText = findViewById(R.id.outputText);
+//        outputText.setText("Output goes here.");
+        machineIPInput = findViewById(R.id.editMachineIP);
+        serverConnectionStatusText = findViewById(R.id.serverConnectionStatusText);
 
         // getting all motion files to send it to the web server for a user to use
         Field[] fields = R.raw.class.getFields();
@@ -104,7 +116,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         // main loop for the robot control
         for (; ; ) {
             if (isNewSayTask) {
-                runOnUiThread(() -> outputText.setText(currentSayTask.command + ": " + currentSayTask.content));
+//                runOnUiThread(() -> outputText.setText(currentSayTask.command + ": " + currentSayTask.content));
 
                 Say say = SayBuilder.with(qiContext).withText(currentSayTask.content).build();
                 say.async().run().thenConsume(voidFuture -> {
@@ -118,7 +130,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
             }
 
             if (isNewMoveTask) {
-                runOnUiThread(() -> outputText.setText(currentMoveTask.command));
+//                runOnUiThread(() -> outputText.setText(currentMoveTask.command));
 
                 Log.d("onRobotFocusGained", "task move");
 
@@ -181,7 +193,12 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private void establishConnection() {
         // Establishing a connection with the server with Pepper tasks
 //        String serverURL = "ws://10.0.2.2:8080/pepper/initiate";
-        String serverURL = "ws://192.168.1.227:8080/pepper/initiate";
+//        String serverURL = "ws://192.168.1.227:8080/pepper/initiate";
+//        String serverURL = "ws://192.168.1.45:8080/pepper/initiate";
+        if (webSocket != null) {
+            webSocket.close(1000, null);
+        }
+
         Request request = new Request.Builder().url(serverURL).build();
         PepperTasksListener listener = new PepperTasksListener();
         OkHttpClient client = new OkHttpClient();
@@ -194,11 +211,12 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
         @Override
         public void onOpen(@NotNull WebSocket webSocket, Response response) {
-            Log.i("WebSocket", "opened");
+            Log.i("PepperTasksListener", "websocket is opened");
 
             // informing the web server about available resources
             webSocket.send(allRawResourcesString);
             Log.d("PepperTasksListener", String.format("resources information sent: %s", allRawResourcesString));
+            runOnUiThread(() -> serverConnectionStatusText.setText("Pepper is connected to the server"));
         }
 
         @Override
@@ -272,14 +290,29 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         @Override
         public void onFailure(WebSocket webSocket, Throwable throwable, Response response) {
             webSocket.close(NORMAL_CLOSURE_STATUS, null);
+            runOnUiThread(() -> serverConnectionStatusText.setText("Pepper isn't connected to the server"));
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            Log.d("PepperTasksListener", "re-establishing connection");
+//            Log.d("PepperTasksListener", "re-establishing connection");
+//            establishConnection();
+        }
+    }
+
+    // UI events
+
+    public void setMachineIP(View view) {
+        String IPString = machineIPInput.getText().toString();
+        try {
+            InetSocketAddress ip = new InetSocketAddress(IPString, 8080);
+            serverURL = String.format("ws:/%s/pepper/initiate", ip.toString());
             establishConnection();
+            Log.d("setMachineIP", String.format("Rebuilding the server connection to %s", serverURL));
+        } catch (Exception err) {
+            Log.d("setMachineIP", String.format("Failed to parse the IP address: %s, error: %s", IPString, err));
         }
     }
 }

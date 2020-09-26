@@ -6,14 +6,37 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/outputText"
+    <EditText
+        android:id="@+id/editMachineIP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@{task.content}"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:ems="10"
+        android:hint="@string/server_ip"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="0dp"
+        android:layout_height="43dp"
+        android:layout_marginStart="8dp"
+        android:onClick="setMachineIP"
+        android:text="@string/set_button"
+        app:layout_constraintBaseline_toBaselineOf="@+id/editMachineIP"
+        app:layout_constraintStart_toEndOf="@+id/editMachineIP" />
+
+    <TextView
+        android:id="@+id/serverConnectionStatusText"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:text="@string/connection_off"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/editMachineIP" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
