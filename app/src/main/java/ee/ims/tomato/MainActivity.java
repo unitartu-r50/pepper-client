@@ -1,12 +1,17 @@
 package ee.ims.tomato;
 
 import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.format.Formatter;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.aldebaran.qi.sdk.Qi;
@@ -28,19 +33,25 @@ import org.json.JSONObject;
 
 import java.lang.reflect.Field;
 import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.StringJoiner;
 
+import kotlin.Pair;
+import okhttp3.Headers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
+import okhttp3.internal.http2.Header;
 import okio.ByteString;
 import okio.Utf8;
 
@@ -51,14 +62,16 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 //    TextView outputText;
     EditText machineIPInput;
     TextView serverConnectionStatusText;
+    ImageView imageView;
 
     // Internal
-    PepperTask task = new PepperTask();
     PepperTask currentSayTask = new PepperTask();
     PepperTask currentMoveTask = new PepperTask();
+    PepperTask currentShowImageTask = new PepperTask();
     Boolean isNewTask = false;
     Boolean isNewSayTask = false;
     Boolean isNewMoveTask = false;
+    Boolean isNewShowImageTask = false;
     String packageName;
     String[] allRawResources;
     String allRawResourcesString;
@@ -68,6 +81,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
     private static class PepperTask {
         public String command;
         public String content;
+        public byte[] byteContent;
         public String name;
         public Integer delay;
     }
@@ -81,10 +95,9 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         QiSDK.register(this, this);
 
         // some fields for a basic feedback
-//        outputText = findViewById(R.id.outputText);
-//        outputText.setText("Output goes here.");
         machineIPInput = findViewById(R.id.editMachineIP);
         serverConnectionStatusText = findViewById(R.id.serverConnectionStatusText);
+        imageView = findViewById(R.id.imageView);
 
         // getting all motion files to send it to the web server for a user to use
         Field[] fields = R.raw.class.getFields();
@@ -116,8 +129,6 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         // main loop for the robot control
         for (; ; ) {
             if (isNewSayTask) {
-//                runOnUiThread(() -> outputText.setText(currentSayTask.command + ": " + currentSayTask.content));
-
                 Say say = SayBuilder.with(qiContext).withText(currentSayTask.content).build();
                 say.async().run().thenConsume(voidFuture -> {
                     if (voidFuture.isSuccess()) {
@@ -130,8 +141,6 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
             }
 
             if (isNewMoveTask) {
-//                runOnUiThread(() -> outputText.setText(currentMoveTask.command));
-
                 Log.d("onRobotFocusGained", "task move");
 
                 Animation motion = null;
@@ -174,6 +183,17 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
                 isNewMoveTask = false;
             }
+
+            if (isNewShowImageTask) {
+                byte[] imageContent = currentShowImageTask.byteContent;
+                Bitmap image = BitmapFactory.decodeByteArray(imageContent, 0, imageContent.length);
+                Log.d("onRobotFocusGained", "bitmap decoded");
+                runOnUiThread(() -> {
+                    imageView.setImageBitmap(image);
+                });
+
+                isNewShowImageTask = false;
+            }
         }
     }
 
@@ -195,6 +215,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 //        String serverURL = "ws://10.0.2.2:8080/pepper/initiate";
 //        String serverURL = "ws://192.168.1.227:8080/pepper/initiate";
 //        String serverURL = "ws://192.168.1.45:8080/pepper/initiate";
+        Log.d("establishConnection", String.format("Establishing a connection to %s", serverURL));
         if (webSocket != null) {
             webSocket.close(1000, null);
         }
@@ -203,6 +224,8 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
         PepperTasksListener listener = new PepperTasksListener();
         OkHttpClient client = new OkHttpClient();
         webSocket = client.newWebSocket(request, listener);
+
+        Log.d("establishConnection", String.format("Connection to %s has been established", serverURL));
     }
 
     // WebSocket implementation with okhttp3
@@ -211,7 +234,7 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
         @Override
         public void onOpen(@NotNull WebSocket webSocket, Response response) {
-            Log.i("PepperTasksListener", "websocket is opened");
+            Log.d("PepperTasksListener", "websocket is opened");
 
             // informing the web server about available resources
             webSocket.send(allRawResourcesString);
@@ -221,6 +244,11 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
         @Override
         public void onMessage(@NotNull WebSocket webSocket, String message) {
+            // clearing image view on any new message
+            runOnUiThread(() -> {
+                imageView.setImageResource(android.R.color.transparent);
+            });
+
             Log.d("WebSocketListener", "onMessage string");
             JSONObject msgJSON = null;
             try {
@@ -238,17 +266,26 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
 
                     if (command.equals("say")) {
                         currentSayTask.command = command;
-                        currentSayTask.content = content;
+                        byte[] byteContent = android.util.Base64.decode(content, Base64.DEFAULT);
+                        currentSayTask.content = new String(byteContent);
                         currentSayTask.name = name;
                         currentSayTask.delay = delay;
                         isNewSayTask = true;
                     }
                     if (command.equals("move")) {
                         currentMoveTask.command = command;
-                        currentMoveTask.content = content;
+                        byte[] byteContent = android.util.Base64.decode(content, Base64.DEFAULT);
+                        currentMoveTask.content = new String(byteContent);
                         currentMoveTask.name = name;
                         currentMoveTask.delay = delay;
                         isNewMoveTask = true;
+                    }
+                    if (command.equals("show_image")) {
+                        currentShowImageTask.command = command;
+                        currentShowImageTask.byteContent = Base64.decode(content, Base64.DEFAULT);
+                        currentShowImageTask.name = name;
+                        currentShowImageTask.delay = delay;
+                        isNewShowImageTask = true;
                     }
 
                     Log.d("WebSocket", String.format("command: %s, name: %s, delay: %d",
@@ -268,37 +305,53 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            if (msgJSON != null) {
-                try {
-                    task.command = msgJSON.getString("command");
-                    task.content = msgJSON.getString("content");
-                    task.name = msgJSON.getString("name");
-                    task.delay = msgJSON.getInt("delay");
-                    isNewTask = true;
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
+            Log.d("PepperTasksListener", "not implemented");
+//            if (msgJSON != null) {
+//                try {
+//                    String command = msgJSON.getString("command");
+//                    String content = msgJSON.getString("content");
+//                    String name = msgJSON.getString("name");
+//                    Integer delay = msgJSON.getInt("delay");
+//
+//                    if (command.equals("show_image")) {
+//                        currentShowImageTask.command = command;
+//                        currentShowImageTask.content = content;
+//                        currentShowImageTask.name = name;
+//                        currentShowImageTask.delay = delay;
+//                        isNewShowImageTask = true;
+//                    } else {
+//                        Log.d("PepperTasksListener", "onMessage got unknown command" + command);
+//                    }
+//
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                }
+//            }
         }
 
         @Override
         public void onClosing(WebSocket webSocket, int code, String reason) {
-            Log.i("WebSocket", "closing: " + reason);
+            Log.d("PepperTasksListener", "closing: " + reason);
             webSocket.close(NORMAL_CLOSURE_STATUS, null);
         }
 
         @Override
         public void onFailure(WebSocket webSocket, Throwable throwable, Response response) {
             webSocket.close(NORMAL_CLOSURE_STATUS, null);
+            Log.d("PepperTasksListener", "failure: " + response.message() + " response headers: " + response.headers().toString());
+
             runOnUiThread(() -> serverConnectionStatusText.setText("Pepper isn't connected to the server"));
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
 
-//            Log.d("PepperTasksListener", "re-establishing connection");
-//            establishConnection();
+        @Override
+        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+            super.onClosed(webSocket, code, reason);
+            Log.d("PepperTasksListener", "closed: " + reason);
         }
     }
 
@@ -310,7 +363,6 @@ public class MainActivity extends RobotActivity implements RobotLifecycleCallbac
             InetSocketAddress ip = new InetSocketAddress(IPString, 8080);
             serverURL = String.format("ws:/%s/pepper/initiate", ip.toString());
             establishConnection();
-            Log.d("setMachineIP", String.format("Rebuilding the server connection to %s", serverURL));
         } catch (Exception err) {
             Log.d("setMachineIP", String.format("Failed to parse the IP address: %s, error: %s", IPString, err));
         }
