@@ -20,11 +20,10 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/setIPButton"
         android:layout_width="0dp"
         android:layout_height="43dp"
         android:layout_marginStart="8dp"
-        android:onClick="setMachineIP"
         android:text="@string/set_button"
         app:layout_constraintBaseline_toBaselineOf="@+id/editMachineIP"
         app:layout_constraintStart_toEndOf="@+id/editMachineIP" />
@@ -35,20 +34,18 @@
         android:layout_height="0dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:text="@string/connection_off"
+        android:text="@string/pepper_status_not_connected"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/editMachineIP" />
 
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="373dp"
-        android:layout_height="287dp"
-        android:visibility="visible"
+    <Button
+        android:id="@+id/start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="436dp"
+        android:text="@string/start_button"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_launcher_background"
-        tools:srcCompat="@tools:sample/avatars" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,5 +2,8 @@
     <string name="app_name">Tomato</string>
     <string name="server_ip">Server\'s IP</string>
     <string name="set_button">Set</string>
-    <string name="connection_off">Pepper isn\'t connected to the server</string>
+    <string name="pepper_status_not_connected">Pepper isn\'t connected to the server</string>
+    <string name="pepper_status_connected">Pepper is connected to the server</string>
+    <string name="title_activity_startup">Session</string>
+    <string name="start_button">Start</string>
 </resources>
