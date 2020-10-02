@@ -1,6 +1,5 @@
 package ee.ims.tomato;
 
-import android.content.Context;
 import android.content.Intent;
 import android.util.Base64;
 import android.util.Log;
@@ -8,7 +7,6 @@ import android.util.Log;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.aldebaran.qi.sdk.QiContext;
-import com.aldebaran.qi.sdk.RobotLifecycleCallbacks;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
@@ -23,11 +21,14 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 
 public class PepperTaskListener extends WebSocketListener {
+    public static String BROADCAST_WEBSOCKET_UP_KEY = "ee.ims.tomato.PepperTaskListener.WEBSOCKET-UP";
+    public static String BROADCAST_WEBSOCKET_MESSAGE_KEY = "ee.ims.tomato.PepperTaskListener.WEBSOCKET-MESSAGE";
+    public static String BROADCAST_WEBSOCKET_DOWN_KEY = "ee.ims.tomato.PepperTaskListener.WEBSOCKET-DOWN";
+
     private static final String TAG = "PepperTaskListener";
     private static final int NORMAL_CLOSURE_STATUS = 1000;
 
     private QiContext qiContext;
-
     private PepperTask currentSayTask = new PepperTask();
     private PepperTask currentMoveTask = new PepperTask();
     private PepperTask currentShowImageTask = new PepperTask();
@@ -39,6 +40,8 @@ public class PepperTaskListener extends WebSocketListener {
     PepperTaskListener(QiContext context) {
         qiContext = context;
     }
+
+    // Getter-setters
 
     public PepperTask getCurrentSayTask() {
         return currentSayTask;
@@ -84,14 +87,14 @@ public class PepperTaskListener extends WebSocketListener {
 
     @Override
     public void onOpen(@NotNull WebSocket webSocket, Response response) {
-        // getting all motion files to send it to the web server for a user to use
         String resources = getBuiltInResources();
         webSocket.send(resources);
         Log.d(TAG, String.format("onOpen: resources information sent: %s", resources));
 
         isWebSocketOpened = true;
-
         Log.d(TAG, "onOpen: websocket is opened");
+
+        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(new Intent(BROADCAST_WEBSOCKET_UP_KEY));
     }
 
     @Override
@@ -143,16 +146,13 @@ public class PepperTaskListener extends WebSocketListener {
             }
         }
 
-        // TODO: clean up intent keys
-        // TODO: add other intents in onClosing, onFAilture, etc
-        Intent intent = new Intent("my-filter");
-        intent.putExtra("new-message", true);
-        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(intent);
+        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(new Intent(BROADCAST_WEBSOCKET_MESSAGE_KEY));
     }
 
     @Override
     public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
         Log.d(TAG, "onMessage using bytes is not implemented");
+        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(new Intent(BROADCAST_WEBSOCKET_MESSAGE_KEY));
     }
 
     @Override
@@ -160,6 +160,7 @@ public class PepperTaskListener extends WebSocketListener {
         Log.d(TAG, "onClosing: " + reason);
         webSocket.close(NORMAL_CLOSURE_STATUS, null);
         isWebSocketOpened = false;
+        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(new Intent(BROADCAST_WEBSOCKET_DOWN_KEY));
     }
 
     @Override
@@ -173,6 +174,8 @@ public class PepperTaskListener extends WebSocketListener {
             headers = response.headers().toString();
         }
         Log.d(TAG, "onFailure: " + message + " response headers: " + headers);
+
+        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(new Intent(BROADCAST_WEBSOCKET_DOWN_KEY));
     }
 
     @Override
@@ -180,6 +183,7 @@ public class PepperTaskListener extends WebSocketListener {
         super.onClosed(webSocket, code, reason);
         Log.d(TAG, "onClosed: " + reason);
         isWebSocketOpened = false;
+        LocalBroadcastManager.getInstance(qiContext).sendBroadcast(new Intent(BROADCAST_WEBSOCKET_DOWN_KEY));
     }
 
     // Other methods
@@ -191,7 +195,6 @@ public class PepperTaskListener extends WebSocketListener {
         for (int i = 0; i < fields.length; i++) {
             allRawResources[i] = fields[i].getName();
         }
-        Log.d(TAG, String.format("found resources: %d, first of them: %s", allRawResources.length, allRawResources[0]));
         JSONObject obj = new JSONObject();
         try {
             obj.put("moves", new JSONArray(allRawResources));

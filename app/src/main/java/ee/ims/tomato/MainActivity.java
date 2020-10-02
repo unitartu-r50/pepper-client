@@ -22,23 +22,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends RobotActivity {
-    // Android specific declarations
-    String packageName;
-    String TAG = "MainActivity";
-//    public static String EXTRA_TASK_LISTENER = "ee.ims.tomato.MainActivity.taskListener";
     public static String EXTRA_SERVER_URL = "ee.ims.tomato.MainActivity.serverURL";
 
-//    private ExecutorService executorService = Executors.newFixedThreadPool(1);
+    String TAG = "MainActivity";
+    String packageName;
 
-    // QiSDK specific declarations
-//    QiContext qiContext;
-
-    // UI declarations
     EditText machineIPInput;
-//    TextView serverConnectionStatusText;
     Button startButton;
     Button setIPButton;
-
     String serverURL = "ws://10.0.2.2:8080/pepper/initiate";
 
     @Override
@@ -46,12 +37,8 @@ public class MainActivity extends RobotActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Pepper initiation
-//        QiSDK.register(this, this);
-
-        // some fields for a basic feedback
+        packageName = getPackageName();
         machineIPInput = findViewById(R.id.editMachineIP);
-//        serverConnectionStatusText = findViewById(R.id.serverConnectionStatusText);
 
         startButton = findViewById(R.id.start);
         startButton.setOnClickListener(new View.OnClickListener() {
@@ -76,33 +63,10 @@ public class MainActivity extends RobotActivity {
                 }
             }
         });
-
-        // other variables
-        packageName = getPackageName();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
     }
-
-//    // Pepper RobotLifecycleCallbacks implementation
-//
-//    @Override
-//    public void onRobotFocusGained(QiContext qiContext) {
-//        Log.i(TAG, "pepper focus gained");
-//        this.qiContext = qiContext;
-////        startListen();
-//    }
-//
-//    @Override
-//    public void onRobotFocusLost() {
-//        Log.i(TAG, "pepper focus lost");
-//        this.qiContext = null;
-//    }
-//
-//    @Override
-//    public void onRobotFocusRefused(String reason) {
-//        Log.i(TAG, "pepper focus refused: " + reason);
-//    }
 }

@@ -33,21 +33,16 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     private String TAG = "CommunicationService";
     private final IBinder binder = new LocalBinder();
     private Executor executor;
-
     private WebSocket webSocket;
-    private Boolean isListening = false;
-
+    private Boolean isWebSocketConnected;
+    private int connectionEstablishingDelayMillis = 1000;
     private PepperTaskListener taskListener;
     private Callbacks activity;
     private QiContext qiContext;
-
     private String serverURL;
-
-    public void setServerURL(String url) {
-        serverURL = url;
-    }
-
-    private BroadcastReceiver messageReceiver;
+    private BroadcastReceiver websocketMessageReceiver;
+    private BroadcastReceiver websocketUpReceiver;
+    private BroadcastReceiver websocketDownReceiver;
 
     public class LocalBinder extends Binder {
         CommunicationService getService(Executor executor) {
@@ -59,6 +54,10 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
+    }
+
+    public void setServerURL(String url) {
+        serverURL = url;
     }
 
     public void startListening(String serverURL) {
@@ -73,9 +72,9 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
             request = new Request.Builder().url(serverURL).build();
         }
         OkHttpClient client = new OkHttpClient();
-        webSocket = client.newWebSocket(request, taskListener); // TODO: why message is processed twice
+        webSocket = client.newWebSocket(request, taskListener);
         client.dispatcher().executorService().shutdown();
-        isListening = true;
+        isWebSocketConnected = true;
 
         Log.d(TAG, String.format("Connection to %s has been established", serverURL));
     }
@@ -96,9 +95,11 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
 
     @Override
     public void onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReceiver);
-        super.onDestroy();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(websocketMessageReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(websocketUpReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(websocketDownReceiver);
         Log.d(TAG, "onDestroy");
+        super.onDestroy();
     }
 
     // pepper callbacks
@@ -107,10 +108,9 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     public void onRobotFocusGained(QiContext qiContext) { // it runs on the background thread
         Log.i(TAG, "focus gained");
         this.qiContext = qiContext;
-
         taskListener = new PepperTaskListener(qiContext);
 
-        messageReceiver = new BroadcastReceiver() {
+        websocketMessageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 executor.execute(() -> {
@@ -137,8 +137,33 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                 });
             }
         };
-        // TODO: do other intents
-        LocalBroadcastManager.getInstance(qiContext).registerReceiver(messageReceiver, new IntentFilter("my-filter"));
+        websocketUpReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                executor.execute(() -> activity.setConnectionStatus(true));
+            }
+        };
+        websocketDownReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                executor.execute(() -> {
+                    isWebSocketConnected = false;
+                    activity.setConnectionStatus(false);
+                    while (!isWebSocketConnected) {
+                        try {
+                            Thread.sleep(connectionEstablishingDelayMillis);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        startListening(serverURL);
+                    }
+                });
+            }
+        };
+
+        LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketMessageReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_MESSAGE_KEY));
+        LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketUpReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_UP_KEY));
+        LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketDownReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_DOWN_KEY));
 
         startListening(serverURL);
     }
@@ -162,7 +187,6 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         }
 
         Animation motion = null;
-
         if (currentMoveTask.content.length() == 0) {
             Log.d(TAG, "empty content");
             int resID = getResources().getIdentifier(currentMoveTask.name, "raw", getPackageName());
@@ -174,7 +198,6 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         } else {
             motion = AnimationBuilder.with(qiContext).withTexts(currentMoveTask.content).build();
         }
-
         if (motion != null) {
             Animate move = AnimateBuilder.with(qiContext).withAnimation(motion).build();
             delayTaskIfNeeded(currentMoveTask);
@@ -232,6 +255,6 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
 
         void setImageResource(Integer resID);
 
-        void setServerConnectionStatus(String status);
+        void setConnectionStatus(Boolean isConnectionUp);
     }
 }

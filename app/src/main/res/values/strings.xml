@@ -6,4 +6,6 @@
     <string name="pepper_status_connected">Pepper is connected to the server</string>
     <string name="title_activity_startup">Session</string>
     <string name="start_button">Start</string>
+    <string name="mainImageDescription">Session image</string>
+    <string name="statusImageDescription">Server connection</string>
 </resources>

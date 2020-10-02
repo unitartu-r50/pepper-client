@@ -8,11 +8,25 @@
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="510dp"
-        android:layout_height="483dp"
-        android:src="@drawable/ic_launcher_background"
+        android:layout_width="859dp"
+        android:layout_height="507dp"
+        android:contentDescription="@string/mainImageDescription"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/connectionStatusImageView"
+        app:layout_constraintVertical_bias="0.314" />
+
+    <ImageView
+        android:id="@+id/connectionStatusImageView"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="@string/statusImageDescription"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_status_off_small" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
