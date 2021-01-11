@@ -14,7 +14,9 @@ import com.aldebaran.qi.sdk.design.activity.RobotActivity;
 
 import android.os.IBinder;
 import android.view.View;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -49,6 +51,15 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
         webView.getSettings().setAllowContentAccess(true);
         webView.getSettings().setDomStorageEnabled(true);
 
+        // adding a webclient in order to open new links in the same view
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                view.loadUrl(request.getUrl().toString());
+                return false;
+            }
+        });
+
         // service binding
         serverURL = getIntent().getStringExtra(MainActivity.EXTRA_SERVER_URL);
         connection = new ServiceConnection() {
@@ -76,14 +87,17 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
     @Override
     public void setImage(Bitmap bitmap) {
         runOnUiThread(() -> {
-            webView.setVisibility(View.GONE);
+            webView.setVisibility(View.INVISIBLE);
             mainImageView.setImageBitmap(bitmap);
         });
     }
 
     @Override
     public void setImageResource(Integer resID) {
-        runOnUiThread(() -> mainImageView.setImageResource(resID));
+        runOnUiThread(() -> {
+            webView.setVisibility(View.INVISIBLE);
+            mainImageView.setImageResource(resID);
+        });
     }
 
     @Override
