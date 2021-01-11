@@ -6,12 +6,15 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.media.Image;
+import android.net.Uri;
 import android.os.Bundle;
 
 import com.aldebaran.qi.sdk.QiSDK;
 import com.aldebaran.qi.sdk.design.activity.RobotActivity;
 
 import android.os.IBinder;
+import android.view.View;
+import android.webkit.WebView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -24,6 +27,7 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
 
     ImageView mainImageView;
     ImageView connectionStatusImageView;
+    WebView webView;
 
     String serverURL;
     ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -39,6 +43,11 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
         packageName = getPackageName();
         mainImageView = (ImageView) findViewById(R.id.imageView);
         connectionStatusImageView = (ImageView) findViewById(R.id.connectionStatusImageView);
+        webView = (WebView) findViewById(R.id.webView);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().getLoadsImagesAutomatically();
+        webView.getSettings().setAllowContentAccess(true);
+        webView.getSettings().setDomStorageEnabled(true);
 
         // service binding
         serverURL = getIntent().getStringExtra(MainActivity.EXTRA_SERVER_URL);
@@ -66,12 +75,24 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
 
     @Override
     public void setImage(Bitmap bitmap) {
-        runOnUiThread(() -> mainImageView.setImageBitmap(bitmap));
+        runOnUiThread(() -> {
+            webView.setVisibility(View.GONE);
+            mainImageView.setImageBitmap(bitmap);
+        });
     }
 
     @Override
     public void setImageResource(Integer resID) {
         runOnUiThread(() -> mainImageView.setImageResource(resID));
+    }
+
+    @Override
+    public void loadURL(String uri) {
+        runOnUiThread(() -> {
+            webView.setVisibility(View.VISIBLE);
+            webView.loadUrl(uri);
+//            webView.postDelayed(() -> webView.loadUrl(uri), 500);
+        });
     }
 
     @Override

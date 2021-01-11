@@ -30,7 +30,7 @@ public class MainActivity extends RobotActivity {
     EditText machineIPInput;
     Button startButton;
     Button setIPButton;
-    String serverURL = "ws://10.0.2.2:8080/pepper/initiate";
+    String serverURL = "ws://10.0.2.2:8080/api/pepper/initiate";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +57,7 @@ public class MainActivity extends RobotActivity {
                 String IPString = machineIPInput.getText().toString();
                 try {
                     InetSocketAddress ip = new InetSocketAddress(IPString, 8080);
-                    serverURL = String.format("ws:/%s/pepper/initiate", ip.toString());
+                    serverURL = String.format("ws:/%s/api/pepper/initiate", ip.toString());
                 } catch (Exception err) {
                     Log.d("setMachineIP", String.format("Failed to parse the IP address: %s, error: %s", IPString, err));
                 }

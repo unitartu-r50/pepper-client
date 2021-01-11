@@ -32,9 +32,11 @@ public class PepperTaskListener extends WebSocketListener {
     private PepperTask currentSayTask = new PepperTask();
     private PepperTask currentMoveTask = new PepperTask();
     private PepperTask currentShowImageTask = new PepperTask();
+    private PepperTask currentShowURLTask = new PepperTask();
     private Boolean isNewSayTaskAvailable = false;
     private Boolean isNewMoveTaskAvailable = false;
     private Boolean isNewShowImageTaskAvailable = false;
+    private Boolean isNewShowURLTaskAvailable = false;
     private Boolean isWebSocketOpened = false;
 
     PepperTaskListener(QiContext context) {
@@ -53,6 +55,10 @@ public class PepperTaskListener extends WebSocketListener {
 
     public PepperTask getCurrentShowImageTask() {
         return currentShowImageTask;
+    }
+
+    public PepperTask getCurrentShowURLTask() {
+        return currentShowURLTask;
     }
 
     public Boolean getNewSayTaskAvailable() {
@@ -77,6 +83,14 @@ public class PepperTaskListener extends WebSocketListener {
 
     public void setNewShowImageTaskAvailable(Boolean newShowImageTaskAvailable) {
         isNewShowImageTaskAvailable = newShowImageTaskAvailable;
+    }
+
+    public Boolean getNewShowURLTaskAvailable() {
+        return isNewShowURLTaskAvailable;
+    }
+
+    public void setNewShowURLTaskAvailable(Boolean newShowURLTaskAvailable) {
+        isNewShowURLTaskAvailable = newShowURLTaskAvailable;
     }
 
     public Boolean getWebSocketOpened() {
@@ -137,6 +151,13 @@ public class PepperTaskListener extends WebSocketListener {
                     currentShowImageTask.name = name;
                     currentShowImageTask.delay = delay;
                     isNewShowImageTaskAvailable = true;
+                }
+                if (command.equals("show_url")) {
+                    currentShowURLTask.command = command;
+                    currentShowURLTask.byteContent = Base64.decode(content, Base64.DEFAULT);
+                    currentShowURLTask.name = name;
+                    currentShowURLTask.delay = delay;
+                    isNewShowURLTaskAvailable = true;
                 }
 
                 Log.d(TAG, String.format("command: %s, name: %s, delay: %d",

@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
@@ -67,7 +68,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
 
         Request request;
         if (serverURL.isEmpty()) {
-            request = new Request.Builder().url("ws://10.0.2.2:8080/pepper/initiate").build();
+            request = new Request.Builder().url("ws://10.0.2.2:8080/api/pepper/initiate").build();
         } else {
             request = new Request.Builder().url(serverURL).build();
         }
@@ -114,14 +115,15 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
             @Override
             public void onReceive(Context context, Intent intent) {
                 executor.execute(() -> {
-                    Boolean isNewSayTask, isNewMoveTask, isNewShowImageTask;
+                    Boolean isNewSayTask, isNewMoveTask, isNewShowImageTask, isNewShowURLTask;
 
                     isNewSayTask = taskListener.getNewSayTaskAvailable();
                     isNewMoveTask = taskListener.getNewMoveTaskAvailable();
                     isNewShowImageTask = taskListener.getNewShowImageTaskAvailable();
+                    isNewShowURLTask = taskListener.getNewShowURLTaskAvailable();
 
                     // clear image view for any new task
-                    if (isNewSayTask || isNewMoveTask || isNewShowImageTask) {
+                    if (isNewSayTask || isNewMoveTask || isNewShowImageTask || isNewShowURLTask) {
                         activity.setImageResource(android.R.color.transparent);
                     }
 
@@ -133,6 +135,9 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                     }
                     if (isNewShowImageTask) {
                         showImage(taskListener.getCurrentShowImageTask());
+                    }
+                    if (isNewShowURLTask) {
+                        showURL(taskListener.getCurrentShowURLTask());
                     }
                 });
             }
@@ -233,6 +238,13 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         taskListener.setNewShowImageTaskAvailable(false);
     }
 
+    public void showURL(PepperTask currentShowURLTask) {
+        delayTaskIfNeeded(currentShowURLTask);
+        activity.loadURL(new String(currentShowURLTask.byteContent)); // TODO: chromium error texture_definition.cc eglCreateImageKHR for cross-thread sharing failed
+        // TODO: programmatic change (show/hide a view) between imageView and webView
+        taskListener.setNewShowURLTaskAvailable(false);
+    }
+
     private void delayTaskIfNeeded(PepperTask task) {
         if (task.delay > 0) {
             try {
@@ -256,5 +268,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         void setImageResource(Integer resID);
 
         void setConnectionStatus(Boolean isConnectionUp);
+
+        void loadURL(String uri);
     }
 }
