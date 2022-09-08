@@ -37,7 +37,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     private final IBinder binder = new LocalBinder();
     private Executor executor;
     private WebSocket webSocket;
-    private Boolean isWebSocketConnected;
+    private Boolean isWebSocketConnected = false;
     private int connectionEstablishingDelayMillis = 1000;
     private PepperTaskListener taskListener;
     private Callbacks activity;
@@ -112,69 +112,75 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     @Override
     public void onRobotFocusGained(QiContext qiContext) { // it runs on the background thread
         Log.i(TAG, "focus gained");
-        this.qiContext = qiContext;
-        taskListener = new PepperTaskListener(qiContext);
+        if (!isWebSocketConnected) {
+            this.qiContext = qiContext;
+            taskListener = new PepperTaskListener(qiContext);
 
-        websocketMessageReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                executor.execute(() -> {
-                    Boolean isNewSayTask, isNewMoveTask, isNewShowImageTask, isNewShowURLTask;
+            websocketMessageReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    executor.execute(() -> {
+                        Boolean isNewSayTask, isNewMoveTask, isNewShowImageTask, isNewShowURLTask, isNewStopVideoTask;
 
-                    isNewSayTask = taskListener.getNewSayTaskAvailable();
-                    isNewMoveTask = taskListener.getNewMoveTaskAvailable();
-                    isNewShowImageTask = taskListener.getNewShowImageTaskAvailable();
-                    isNewShowURLTask = taskListener.getNewShowURLTaskAvailable();
+                        isNewSayTask = taskListener.getNewSayTaskAvailable();
+                        isNewMoveTask = taskListener.getNewMoveTaskAvailable();
+                        isNewShowImageTask = taskListener.getNewShowImageTaskAvailable();
+                        isNewShowURLTask = taskListener.getNewShowURLTaskAvailable();
+                        isNewStopVideoTask = taskListener.getNewStopVideoTaskAvailable();
 
-                    // clear image view for any new task
-                    if (isNewSayTask || isNewMoveTask || isNewShowImageTask || isNewShowURLTask) {
-                        activity.setImageResource(android.R.color.transparent);
-                    }
-
-                    if (isNewSayTask) {
-                        say(taskListener.getCurrentSayTask());
-                    }
-                    if (isNewMoveTask) {
-                        move(taskListener.getCurrentMoveTask());
-                    }
-                    if (isNewShowImageTask) {
-                        showImage(taskListener.getCurrentShowImageTask());
-                    }
-                    if (isNewShowURLTask) {
-                        showURL(taskListener.getCurrentShowURLTask());
-                    }
-                });
-            }
-        };
-        websocketUpReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                executor.execute(() -> activity.setConnectionStatus(true));
-            }
-        };
-        websocketDownReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                executor.execute(() -> {
-                    isWebSocketConnected = false;
-                    activity.setConnectionStatus(false);
-                    while (!isWebSocketConnected) {
-                        try {
-                            Thread.sleep(connectionEstablishingDelayMillis);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        // clear image view for any new task
+                        if (isNewSayTask || isNewMoveTask || isNewShowImageTask || isNewShowURLTask) {
+                            activity.setImageResource(android.R.color.transparent);
                         }
-                        startListening(serverURL);
-                    }
-                });
-            }
-        };
 
-        LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketMessageReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_MESSAGE_KEY));
-        LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketUpReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_UP_KEY));
-        LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketDownReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_DOWN_KEY));
+                        if (isNewSayTask) {
+                            say(taskListener.getCurrentSayTask());
+                        }
+                        if (isNewMoveTask) {
+                            move(taskListener.getCurrentMoveTask());
+                        }
+                        if (isNewShowImageTask) {
+                            showImage(taskListener.getCurrentShowImageTask());
+                        }
+                        if (isNewShowURLTask) {
+                            showURL(taskListener.getCurrentShowURLTask());
+                        }
+                        if (isNewStopVideoTask) {
+                            stopVideo();
+                        }
+                    });
+                }
+            };
+            websocketUpReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    executor.execute(() -> activity.setConnectionStatus(true));
+                }
+            };
+            websocketDownReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    executor.execute(() -> {
+                        isWebSocketConnected = false;
+                        activity.setConnectionStatus(false);
+                        while (!isWebSocketConnected) {
+                            try {
+                                Thread.sleep(connectionEstablishingDelayMillis);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            startListening(serverURL);
+                        }
+                    });
+                }
+            };
 
-        startListening(serverURL);
+            LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketMessageReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_MESSAGE_KEY));
+            LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketUpReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_UP_KEY));
+            LocalBroadcastManager.getInstance(qiContext).registerReceiver(websocketDownReceiver, new IntentFilter(PepperTaskListener.BROADCAST_WEBSOCKET_DOWN_KEY));
+
+            startListening(serverURL);
+        }
     }
 
     @Override
@@ -276,6 +282,10 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         taskListener.setNewShowURLTaskAvailable(false);
     }
 
+    public void stopVideo() {
+        activity.stopVideo();
+    }
+
     private void delayTaskIfNeeded(PepperTask task) {
         if (task.delay > 0) {
             try {
@@ -300,5 +310,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         void setConnectionStatus(Boolean isConnectionUp);
 
         void loadURL(String uri);
+
+        void stopVideo();
     }
 }

@@ -9,8 +9,12 @@ import android.os.Bundle;
 
 import com.aldebaran.qi.sdk.QiSDK;
 import com.aldebaran.qi.sdk.design.activity.RobotActivity;
+import com.google.android.youtube.player.YouTubeInitializationResult;
+import com.google.android.youtube.player.YouTubePlayer;
+import com.google.android.youtube.player.YouTubePlayerSupportFragment;
 
 import android.os.IBinder;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
@@ -19,6 +23,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+
+import androidx.fragment.app.FragmentTransaction;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,8 +36,11 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
     ImageView mainImageView;
     ImageView connectionStatusImageView;
     WebView webView;
+    YouTubePlayerSupportFragment youTubePlayerFragment;
 
     String serverURL;
+    String videoURL;
+    String videoID;
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     CommunicationService communication;
     Boolean isCommunicationBound;
@@ -39,12 +48,21 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (!isTaskRoot()
+            && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER)
+            && getIntent().getAction() != null
+            && getIntent().getAction().equals(Intent.ACTION_MAIN)) {
+
+            finish();
+            return;
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_session);
 
         packageName = getPackageName();
         mainImageView = (ImageView) findViewById(R.id.imageView);
         connectionStatusImageView = (ImageView) findViewById(R.id.connectionStatusImageView);
+
         // initializing WebView and making it invisible from the very beginning,
         // because it takes the whole screen
         webView = (WebView) findViewById(R.id.webView);
@@ -107,9 +125,77 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
     @Override
     public void loadURL(String uri) {
         runOnUiThread(() -> {
-            webView.setVisibility(View.VISIBLE);
-            webView.loadUrl(uri);
+            if (uri.startsWith("youtube:")) {
+
+                videoID = uri.replace("youtube:", "");
+
+                youTubePlayerFragment = YouTubePlayerSupportFragment.newInstance();
+                youTubePlayerFragment.initialize("AIzaSyCNem-D_zKcygVu70qmba6qW5sTtlg8opY", new YouTubePlayer.OnInitializedListener() {
+                    @Override
+                    public void onInitializationSuccess(YouTubePlayer.Provider provider, YouTubePlayer player, boolean wasRestored) {
+
+                        YouTubePlayer.PlayerStateChangeListener stateChangeListener = new YouTubePlayer.PlayerStateChangeListener() {
+                            @Override
+                            public void onLoading() {
+
+                            }
+
+                            @Override
+                            public void onLoaded(String s) {
+
+                            }
+
+                            @Override
+                            public void onAdStarted() {
+
+                            }
+
+                            @Override
+                            public void onVideoStarted() {
+
+                            }
+
+                            @Override
+                            public void onVideoEnded() {
+                                Log.d(TAG, "Video finished");
+                                getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+                            }
+
+                            @Override
+                            public void onError(YouTubePlayer.ErrorReason errorReason) {
+
+                            }
+                        };
+
+                        player.loadVideo(videoID);
+                        player.setFullscreen(true);
+                        player.setPlayerStateChangeListener(stateChangeListener);
+                        player.play();
+
+                    }
+
+                    @Override
+                    public void onInitializationFailure(YouTubePlayer.Provider provider, YouTubeInitializationResult youTubeInitializationResult) {
+
+                    }
+                });
+
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.replace(R.id.youtube_fragment, (androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+
+            }
+            else {
+                webView.setVisibility(View.VISIBLE);
+                webView.loadUrl(uri);
+            }
         });
+    }
+
+    public void stopVideo() {
+        if (youTubePlayerFragment != null) {
+            Log.d(TAG, "StopVideo");
+            getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+        }
     }
 
     @Override

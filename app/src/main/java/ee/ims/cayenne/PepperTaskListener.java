@@ -38,6 +38,7 @@ public class PepperTaskListener extends WebSocketListener {
     private Boolean isNewMoveTaskAvailable = false;
     private Boolean isNewShowImageTaskAvailable = false;
     private Boolean isNewShowURLTaskAvailable = false;
+    private Boolean isNewStopVideoTaskAvailable = false;
     private Boolean isWebSocketOpened = false;
 
     PepperTaskListener(QiContext context) {
@@ -92,6 +93,14 @@ public class PepperTaskListener extends WebSocketListener {
 
     public void setNewShowURLTaskAvailable(Boolean newShowURLTaskAvailable) {
         isNewShowURLTaskAvailable = newShowURLTaskAvailable;
+    }
+
+    public Boolean getNewStopVideoTaskAvailable() {
+        return isNewStopVideoTaskAvailable;
+    }
+
+    public void setNewStopVideoTaskAvailable(Boolean newStopVideoTaskAvailable) {
+        isNewStopVideoTaskAvailable = newStopVideoTaskAvailable;
     }
 
     public Boolean getWebSocketOpened() {
@@ -164,6 +173,9 @@ public class PepperTaskListener extends WebSocketListener {
                     currentShowURLTask.delay = delay;
                     currentShowURLTask.id = id;
                     isNewShowURLTaskAvailable = true;
+                }
+                if (command.equals("stop_video")) {
+                    isNewStopVideoTaskAvailable = true;
                 }
 
                 Log.d(TAG, String.format("command: %s, name: %s, delay: %d",

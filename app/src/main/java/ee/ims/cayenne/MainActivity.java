@@ -64,11 +64,6 @@ public class MainActivity extends RobotActivity {
         });
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     private String composeAPIURI(String ipString) {
         String uri = null;
         try {
