@@ -38,6 +38,7 @@ public class PepperTaskListener extends WebSocketListener {
     private Boolean isNewMoveTaskAvailable = false;
     private Boolean isNewShowImageTaskAvailable = false;
     private Boolean isNewShowURLTaskAvailable = false;
+    private Boolean isNewClearImageTaskAvailable = false;
     private Boolean isNewStopVideoTaskAvailable = false;
     private Boolean isWebSocketOpened = false;
 
@@ -93,6 +94,14 @@ public class PepperTaskListener extends WebSocketListener {
 
     public void setNewShowURLTaskAvailable(Boolean newShowURLTaskAvailable) {
         isNewShowURLTaskAvailable = newShowURLTaskAvailable;
+    }
+
+    public Boolean getNewClearImageTaskAvailable() {
+        return isNewClearImageTaskAvailable;
+    }
+
+    public void setNewClearImageTaskAvailable(Boolean newClearImageTaskAvailable) {
+        isNewClearImageTaskAvailable = newClearImageTaskAvailable;
     }
 
     public Boolean getNewStopVideoTaskAvailable() {
@@ -173,6 +182,9 @@ public class PepperTaskListener extends WebSocketListener {
                     currentShowURLTask.delay = delay;
                     currentShowURLTask.id = id;
                     isNewShowURLTaskAvailable = true;
+                }
+                if (command.equals("clear_image")) {
+                    isNewClearImageTaskAvailable = true;
                 }
                 if (command.equals("stop_video")) {
                     isNewStopVideoTaskAvailable = true;

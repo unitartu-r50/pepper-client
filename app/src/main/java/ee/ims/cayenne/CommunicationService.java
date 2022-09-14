@@ -120,33 +120,32 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     executor.execute(() -> {
-                        Boolean isNewSayTask, isNewMoveTask, isNewShowImageTask, isNewShowURLTask, isNewStopVideoTask;
-
-                        isNewSayTask = taskListener.getNewSayTaskAvailable();
-                        isNewMoveTask = taskListener.getNewMoveTaskAvailable();
-                        isNewShowImageTask = taskListener.getNewShowImageTaskAvailable();
-                        isNewShowURLTask = taskListener.getNewShowURLTaskAvailable();
-                        isNewStopVideoTask = taskListener.getNewStopVideoTaskAvailable();
-
                         // clear image view for any new task
-                        if (isNewSayTask || isNewMoveTask || isNewShowImageTask || isNewShowURLTask) {
-                            activity.setImageResource(android.R.color.transparent);
-                        }
+//                         if (isNewSayTask || isNewMoveTask || isNewShowImageTask || isNewShowURLTask) {
+//                            activity.setImageResource(android.R.color.transparent);
+//                        }
 
-                        if (isNewSayTask) {
+                        if (taskListener.getNewSayTaskAvailable()) {
                             say(taskListener.getCurrentSayTask());
                         }
-                        if (isNewMoveTask) {
+                        if (taskListener.getNewMoveTaskAvailable()) {
                             move(taskListener.getCurrentMoveTask());
                         }
-                        if (isNewShowImageTask) {
+                        if (taskListener.getNewShowImageTaskAvailable()) {
                             showImage(taskListener.getCurrentShowImageTask());
                         }
-                        if (isNewShowURLTask) {
+                        if (taskListener.getNewShowURLTaskAvailable()) {
                             showURL(taskListener.getCurrentShowURLTask());
                         }
-                        if (isNewStopVideoTask) {
-                            stopVideo();
+                        // Clearing images / the screen
+                        if (taskListener.getNewClearImageTaskAvailable()) {
+                            activity.setImageResource(android.R.color.transparent);
+                            taskListener.setNewClearImageTaskAvailable(false);
+                        }
+                        // Stopping video
+                        if (taskListener.getNewStopVideoTaskAvailable()) {
+                            activity.stopVideo();
+                            taskListener.setNewStopVideoTaskAvailable(false);
                         }
                     });
                 }
@@ -280,10 +279,6 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         // TODO: programmatic change (show/hide a view) between imageView and webView
         webSocket.send(String.format("{\"action_success\": \"%s\"}", currentShowURLTask.id));
         taskListener.setNewShowURLTaskAvailable(false);
-    }
-
-    public void stopVideo() {
-        activity.stopVideo();
     }
 
     private void delayTaskIfNeeded(PepperTask task) {
