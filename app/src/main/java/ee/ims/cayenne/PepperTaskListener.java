@@ -30,16 +30,18 @@ public class PepperTaskListener extends WebSocketListener {
     private static final int NORMAL_CLOSURE_STATUS = 1000;
 
     private QiContext qiContext;
+    private PepperTask currentAuthTask = new PepperTask();
     private PepperTask currentSayTask = new PepperTask();
     private PepperTask currentMoveTask = new PepperTask();
     private PepperTask currentShowImageTask = new PepperTask();
     private PepperTask currentShowURLTask = new PepperTask();
+    private Boolean isNewAuthTaskAvailable = false;
     private Boolean isNewSayTaskAvailable = false;
     private Boolean isNewMoveTaskAvailable = false;
     private Boolean isNewShowImageTaskAvailable = false;
     private Boolean isNewShowURLTaskAvailable = false;
     private Boolean isNewClearImageTaskAvailable = false;
-    private Boolean isNewStopVideoTaskAvailable = false;
+    private Boolean isNewClearFragmentTaskAvailable = false;
     private Boolean isWebSocketOpened = false;
 
     PepperTaskListener(QiContext context) {
@@ -47,6 +49,10 @@ public class PepperTaskListener extends WebSocketListener {
     }
 
     // Getter-setters
+
+    public PepperTask getCurrentAuthTask() {
+        return currentAuthTask;
+    }
 
     public PepperTask getCurrentSayTask() {
         return currentSayTask;
@@ -66,6 +72,14 @@ public class PepperTaskListener extends WebSocketListener {
 
     public Boolean getNewSayTaskAvailable() {
         return isNewSayTaskAvailable;
+    }
+
+    public void setNewAuthTaskAvailable(Boolean newAuthTaskAvailable) {
+        isNewAuthTaskAvailable = newAuthTaskAvailable;
+    }
+
+    public Boolean getNewAuthTaskAvailable() {
+        return isNewAuthTaskAvailable;
     }
 
     public void setNewSayTaskAvailable(Boolean newSayTaskAvailable) {
@@ -104,12 +118,12 @@ public class PepperTaskListener extends WebSocketListener {
         isNewClearImageTaskAvailable = newClearImageTaskAvailable;
     }
 
-    public Boolean getNewStopVideoTaskAvailable() {
-        return isNewStopVideoTaskAvailable;
+    public Boolean getNewClearFragmentTaskAvailable() {
+        return isNewClearFragmentTaskAvailable;
     }
 
-    public void setNewStopVideoTaskAvailable(Boolean newStopVideoTaskAvailable) {
-        isNewStopVideoTaskAvailable = newStopVideoTaskAvailable;
+    public void setNewClearFragmentTaskAvailable(Boolean newClearFragmentTaskAvailable) {
+        isNewClearFragmentTaskAvailable = newClearFragmentTaskAvailable;
     }
 
     public Boolean getWebSocketOpened() {
@@ -149,6 +163,12 @@ public class PepperTaskListener extends WebSocketListener {
                 Integer delay = msgJSON.getInt("delay");
                 String id = msgJSON.getString("id");
 
+                if (command.equals("auth")) {
+                    currentAuthTask.content = content;
+                    currentAuthTask.name = name;
+                    currentAuthTask.id = id;
+                    isNewAuthTaskAvailable = true;
+                }
                 if (command.equals("say")) {
                     currentSayTask.command = command;
                     byte[] byteContent = android.util.Base64.decode(content.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE);
@@ -186,8 +206,8 @@ public class PepperTaskListener extends WebSocketListener {
                 if (command.equals("clear_image")) {
                     isNewClearImageTaskAvailable = true;
                 }
-                if (command.equals("stop_video")) {
-                    isNewStopVideoTaskAvailable = true;
+                if (command.equals("clear_fragment")) {
+                    isNewClearFragmentTaskAvailable = true;
                 }
 
                 Log.d(TAG, String.format("command: %s, name: %s, delay: %d",

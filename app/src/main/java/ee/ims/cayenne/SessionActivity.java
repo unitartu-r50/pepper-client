@@ -1,5 +1,7 @@
 package ee.ims.cayenne;
 
+import static java.lang.String.valueOf;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -37,9 +39,9 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
     ImageView connectionStatusImageView;
     WebView webView;
     YouTubePlayerSupportFragment youTubePlayerFragment;
+    AuthFragment authFragment;
 
     String serverURL;
-    String videoURL;
     String videoID;
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     CommunicationService communication;
@@ -191,10 +193,13 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
         });
     }
 
-    public void stopVideo() {
+    public void clearFragment() {
+        Log.d(TAG, "ClearFragment");
         if (youTubePlayerFragment != null) {
-            Log.d(TAG, "StopVideo");
             getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+        }
+        if (authFragment != null) {
+            authFragment.dismiss();
         }
     }
 
@@ -252,5 +257,16 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
             ((FrameLayout)getWindow().getDecorView()).addView(this.mCustomView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             getWindow().getDecorView().setSystemUiVisibility(FULL_SCREEN_SETTING);
         }
+    }
+
+    public void auth(String auth_code, String helptext) {
+        if (authFragment != null) {
+            authFragment.dismiss();
+        }
+        Log.d(TAG, valueOf(authFragment != null));
+        authFragment = AuthFragment.newInstance(auth_code, helptext);
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        authFragment.show(ft, "Auth_dialog");
+        Log.d(TAG, "AUTH CODE: " + auth_code);
     }
 }

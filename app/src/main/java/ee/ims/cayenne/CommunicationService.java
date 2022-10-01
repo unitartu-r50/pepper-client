@@ -124,7 +124,10 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
 //                         if (isNewSayTask || isNewMoveTask || isNewShowImageTask || isNewShowURLTask) {
 //                            activity.setImageResource(android.R.color.transparent);
 //                        }
-
+                        if (taskListener.getNewAuthTaskAvailable()) {
+                            activity.auth(taskListener.getCurrentAuthTask().id, taskListener.getCurrentAuthTask().content);
+                            taskListener.setNewAuthTaskAvailable(false);
+                        }
                         if (taskListener.getNewSayTaskAvailable()) {
                             say(taskListener.getCurrentSayTask());
                         }
@@ -142,10 +145,10 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                             activity.setImageResource(android.R.color.transparent);
                             taskListener.setNewClearImageTaskAvailable(false);
                         }
-                        // Stopping video
-                        if (taskListener.getNewStopVideoTaskAvailable()) {
-                            activity.stopVideo();
-                            taskListener.setNewStopVideoTaskAvailable(false);
+                        // Clearing fragments (authentication/Youtube)
+                        if (taskListener.getNewClearFragmentTaskAvailable()) {
+                            activity.clearFragment();
+                            taskListener.setNewClearFragmentTaskAvailable(false);
                         }
                     });
                 }
@@ -306,6 +309,8 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
 
         void loadURL(String uri);
 
-        void stopVideo();
+        void clearFragment();
+
+        void auth(String auth_code, String helptext);
     }
 }
