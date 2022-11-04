@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -47,6 +48,10 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     private BroadcastReceiver websocketUpReceiver;
     private BroadcastReceiver websocketDownReceiver;
     private MediaPlayer mediaPlayer;
+
+    // Delay implementation from https://stackoverflow.com/a/3039718
+    private static class DelayHandler extends Handler {}
+    private final DelayHandler delayHandler = new DelayHandler();
 
     public class LocalBinder extends Binder {
         CommunicationService getService(Executor executor) {
@@ -217,8 +222,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         }
         if (motion != null) {
             Animate move = AnimateBuilder.with(qiContext).withAnimation(motion).build();
-            delayTaskIfNeeded(currentMoveTask);
-            move.async().run().thenConsume(voidFuture -> {
+            delayHandler.postDelayed(() -> move.async().run().thenConsume(voidFuture -> {
                 if (voidFuture.isSuccess()) {
                     Log.d(TAG, "Animation has finished");
                     webSocket.send(String.format("{\"action_success\": \"%s\"}", currentMoveTask.id));
@@ -226,7 +230,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                     Log.d(TAG, "Animation had an error:", voidFuture.getError());
                     webSocket.send(String.format("{\"action_error\": \"%s\"}", currentMoveTask.id));
                 }
-            });
+                }), currentMoveTask.delay*1000);
         }
 
         taskListener.setNewMoveTaskAvailable(false);
@@ -253,8 +257,7 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                 mediaPlayer = null;
                 webSocket.send(String.format("{\"action_success\": \"%s\"}", currentSayTask.id));
             });
-            Log.i(TAG, "say: Playing...");
-            mediaPlayer.start();
+            delayHandler.postDelayed(() -> mediaPlayer.start(), currentSayTask.delay*1000);
         }
         catch (IOException e) {
             Log.e(TAG, String.format("Say ran into an IOException: %s", e));
@@ -267,31 +270,67 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         taskListener.setNewSayTaskAvailable(false);
     }
 
+    public static class ImageDelayer implements Runnable {
+        private final PepperTask rShowImageTask;
+        private final Callbacks rActivity;
+        private final WebSocket rWebSocket;
+        private final PepperTaskListener rTaskListener;
+
+        public ImageDelayer(PepperTask showImageTask,
+                            Callbacks activity,
+                            WebSocket webSocket,
+                            PepperTaskListener taskListener) {
+            rShowImageTask = showImageTask;
+            rActivity = activity;
+            rWebSocket = webSocket;
+            rTaskListener = taskListener;
+        }
+
+        @Override
+        public void run() {
+            byte[] imageContent = rShowImageTask.byteContent;
+            Bitmap image = BitmapFactory.decodeByteArray(imageContent, 0, imageContent.length);
+            rActivity.setImage((image));
+            rWebSocket.send(String.format("{\"action_success\": \"%s\"}", rShowImageTask.id));
+            rTaskListener.setNewShowImageTaskAvailable(false);
+        }
+    }
+
     public void showImage(PepperTask currentShowImageTask) {
-        byte[] imageContent = currentShowImageTask.byteContent;
-        Bitmap image = BitmapFactory.decodeByteArray(imageContent, 0, imageContent.length);
-        delayTaskIfNeeded(currentShowImageTask);
-        activity.setImage((image));
-        webSocket.send(String.format("{\"action_success\": \"%s\"}", currentShowImageTask.id));
-        taskListener.setNewShowImageTaskAvailable(false);
+        ImageDelayer imageDelayer = new ImageDelayer(currentShowImageTask, activity, webSocket, taskListener);
+        delayHandler.postDelayed(imageDelayer, currentShowImageTask.delay*1000);
+    }
+
+    public static class URLDelayer implements Runnable {
+        private final PepperTask rShowURLTask;
+        private final Callbacks rActivity;
+        private final WebSocket rWebSocket;
+        private final PepperTaskListener rTaskListener;
+
+        public URLDelayer(PepperTask showURLTask,
+                            Callbacks activity,
+                            WebSocket webSocket,
+                            PepperTaskListener taskListener) {
+            rShowURLTask = showURLTask;
+            rActivity = activity;
+            rWebSocket = webSocket;
+            rTaskListener = taskListener;
+        }
+
+        @Override
+        public void run() {
+            // TODO: chromium error texture_definition.cc eglCreateImageKHR for cross-thread sharing failed
+            rActivity.loadURL(new String(rShowURLTask.byteContent));
+            // TODO: programmatic change (show/hide a view) between imageView and webView
+            rWebSocket.send(String.format("{\"action_success\": \"%s\"}", rShowURLTask.id));
+            rTaskListener.setNewShowURLTaskAvailable(false);
+
+        }
     }
 
     public void showURL(PepperTask currentShowURLTask) {
-        delayTaskIfNeeded(currentShowURLTask);
-        activity.loadURL(new String(currentShowURLTask.byteContent)); // TODO: chromium error texture_definition.cc eglCreateImageKHR for cross-thread sharing failed
-        // TODO: programmatic change (show/hide a view) between imageView and webView
-        webSocket.send(String.format("{\"action_success\": \"%s\"}", currentShowURLTask.id));
-        taskListener.setNewShowURLTaskAvailable(false);
-    }
-
-    private void delayTaskIfNeeded(PepperTask task) {
-        if (task.delay > 0) {
-            try {
-                Thread.sleep(task.delay);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        URLDelayer urlDelayer = new URLDelayer(currentShowURLTask, activity, webSocket, taskListener);
+        delayHandler.postDelayed(urlDelayer, currentShowURLTask.delay*1000);
     }
 
     // callbacks
