@@ -204,6 +204,8 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
     // helpers
 
     public void move(PepperTask currentMoveTask) {
+        taskListener.setNewMoveTaskAvailable(false);
+
         if (currentMoveTask == null) {
             return;
         }
@@ -232,11 +234,10 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
                 }
                 }), currentMoveTask.delay*1000);
         }
-
-        taskListener.setNewMoveTaskAvailable(false);
     }
 
     public void say(PepperTask currentSayTask) {
+        taskListener.setNewSayTaskAvailable(false);
         // Play the audio via MediaPlayer in lieu of using Say from PepperSDK
         try {
             URI uri = new URI(serverURL);
@@ -267,23 +268,19 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
             Log.e(TAG, String.format("Say ran into an URISyntaxException: %s", e));
             webSocket.send(String.format("{\"action_error\": \"%s\"}", currentSayTask.id));
         }
-        taskListener.setNewSayTaskAvailable(false);
     }
 
     public static class ImageDelayer implements Runnable {
         private final PepperTask rShowImageTask;
         private final Callbacks rActivity;
         private final WebSocket rWebSocket;
-        private final PepperTaskListener rTaskListener;
 
         public ImageDelayer(PepperTask showImageTask,
                             Callbacks activity,
-                            WebSocket webSocket,
-                            PepperTaskListener taskListener) {
+                            WebSocket webSocket) {
             rShowImageTask = showImageTask;
             rActivity = activity;
             rWebSocket = webSocket;
-            rTaskListener = taskListener;
         }
 
         @Override
@@ -292,12 +289,12 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
             Bitmap image = BitmapFactory.decodeByteArray(imageContent, 0, imageContent.length);
             rActivity.setImage((image));
             rWebSocket.send(String.format("{\"action_success\": \"%s\"}", rShowImageTask.id));
-            rTaskListener.setNewShowImageTaskAvailable(false);
         }
     }
 
     public void showImage(PepperTask currentShowImageTask) {
-        ImageDelayer imageDelayer = new ImageDelayer(currentShowImageTask, activity, webSocket, taskListener);
+        taskListener.setNewShowImageTaskAvailable(false);
+        ImageDelayer imageDelayer = new ImageDelayer(currentShowImageTask, activity, webSocket);
         delayHandler.postDelayed(imageDelayer, currentShowImageTask.delay*1000);
     }
 
@@ -305,16 +302,13 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
         private final PepperTask rShowURLTask;
         private final Callbacks rActivity;
         private final WebSocket rWebSocket;
-        private final PepperTaskListener rTaskListener;
 
         public URLDelayer(PepperTask showURLTask,
                             Callbacks activity,
-                            WebSocket webSocket,
-                            PepperTaskListener taskListener) {
+                            WebSocket webSocket) {
             rShowURLTask = showURLTask;
             rActivity = activity;
             rWebSocket = webSocket;
-            rTaskListener = taskListener;
         }
 
         @Override
@@ -323,13 +317,12 @@ public class CommunicationService extends Service implements RobotLifecycleCallb
             rActivity.loadURL(new String(rShowURLTask.byteContent));
             // TODO: programmatic change (show/hide a view) between imageView and webView
             rWebSocket.send(String.format("{\"action_success\": \"%s\"}", rShowURLTask.id));
-            rTaskListener.setNewShowURLTaskAvailable(false);
-
         }
     }
 
     public void showURL(PepperTask currentShowURLTask) {
-        URLDelayer urlDelayer = new URLDelayer(currentShowURLTask, activity, webSocket, taskListener);
+        taskListener.setNewShowURLTaskAvailable(false);
+        URLDelayer urlDelayer = new URLDelayer(currentShowURLTask, activity, webSocket);
         delayHandler.postDelayed(urlDelayer, currentShowURLTask.delay*1000);
     }
 
