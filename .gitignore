@@ -8,3 +8,5 @@
 .cxx
 .gradle/
 release/
+keystore.properties
+app/androidkeys2.jks

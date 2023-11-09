@@ -11,9 +11,9 @@ import android.os.Bundle;
 
 import com.aldebaran.qi.sdk.QiSDK;
 import com.aldebaran.qi.sdk.design.activity.RobotActivity;
-import com.google.android.youtube.player.YouTubeInitializationResult;
-import com.google.android.youtube.player.YouTubePlayer;
-import com.google.android.youtube.player.YouTubePlayerSupportFragment;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 
 import android.os.IBinder;
 import android.util.Log;
@@ -26,6 +26,7 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentTransaction;
 
 import java.util.concurrent.ExecutorService;
@@ -38,8 +39,9 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
     ImageView mainImageView;
     ImageView connectionStatusImageView;
     WebView webView;
-    YouTubePlayerSupportFragment youTubePlayerFragment;
+//    YouTubePlayerSupportFragment youTubePlayerFragment;
     AuthFragment authFragment;
+    YoutubeFragment youtubeFragment;
 
     String serverURL;
     String videoID;
@@ -131,59 +133,62 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
 
                 videoID = uri.replace("youtube:", "");
 
-                youTubePlayerFragment = YouTubePlayerSupportFragment.newInstance();
-                youTubePlayerFragment.initialize("AIzaSyCNem-D_zKcygVu70qmba6qW5sTtlg8opY", new YouTubePlayer.OnInitializedListener() {
-                    @Override
-                    public void onInitializationSuccess(YouTubePlayer.Provider provider, YouTubePlayer player, boolean wasRestored) {
-
-                        YouTubePlayer.PlayerStateChangeListener stateChangeListener = new YouTubePlayer.PlayerStateChangeListener() {
-                            @Override
-                            public void onLoading() {
-
-                            }
-
-                            @Override
-                            public void onLoaded(String s) {
-
-                            }
-
-                            @Override
-                            public void onAdStarted() {
-
-                            }
-
-                            @Override
-                            public void onVideoStarted() {
-
-                            }
-
-                            @Override
-                            public void onVideoEnded() {
-                                Log.d(TAG, "Video finished");
-                                getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
-                            }
-
-                            @Override
-                            public void onError(YouTubePlayer.ErrorReason errorReason) {
-
-                            }
-                        };
-
-                        player.loadVideo(videoID);
-                        player.setFullscreen(true);
-                        player.setPlayerStateChangeListener(stateChangeListener);
-                        player.play();
-
-                    }
-
-                    @Override
-                    public void onInitializationFailure(YouTubePlayer.Provider provider, YouTubeInitializationResult youTubeInitializationResult) {
-
-                    }
-                });
-
+//                youTubePlayerFragment = YouTubePlayerSupportFragment.newInstance();
+//                youTubePlayerFragment.initialize("AIzaSyCNem-D_zKcygVu70qmba6qW5sTtlg8opY", new YouTubePlayer.OnInitializedListener() {
+//                    @Override
+//                    public void onInitializationSuccess(YouTubePlayer.Provider provider, YouTubePlayer player, boolean wasRestored) {
+//
+//                        YouTubePlayer.PlayerStateChangeListener stateChangeListener = new YouTubePlayer.PlayerStateChangeListener() {
+//                            @Override
+//                            public void onLoading() {
+//
+//                            }
+//
+//                            @Override
+//                            public void onLoaded(String s) {
+//
+//                            }
+//
+//                            @Override
+//                            public void onAdStarted() {
+//
+//                            }
+//
+//                            @Override
+//                            public void onVideoStarted() {
+//
+//                            }
+//
+//                            @Override
+//                            public void onVideoEnded() {
+//                                Log.d(TAG, "Video finished");
+//                                getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+//                            }
+//
+//                            @Override
+//                            public void onError(YouTubePlayer.ErrorReason errorReason) {
+//
+//                            }
+//                        };
+//
+//                        player.loadVideo(videoID);
+//                        player.setFullscreen(true);
+//                        player.setPlayerStateChangeListener(stateChangeListener);
+//                        player.play();
+//
+//                    }
+//
+//                    @Override
+//                    public void onInitializationFailure(YouTubePlayer.Provider provider, YouTubeInitializationResult youTubeInitializationResult) {
+//
+//                    }
+//                });
+//
+//                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+//                ft.replace(R.id.youtube_fragment, (androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit()
+                youtubeFragment = new YoutubeFragment(videoID);
                 FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.replace(R.id.youtube_fragment, (androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+                ft.add(R.id.fragment_container, youtubeFragment).commit();
 
             }
             else {
@@ -195,9 +200,13 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
 
     public void clearFragment() {
         Log.d(TAG, "ClearFragment");
-        if (youTubePlayerFragment != null) {
-            getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+//        if (youTubePlayerFragment != null) {
+//            getSupportFragmentManager().beginTransaction().remove((androidx.fragment.app.Fragment) (Object) youTubePlayerFragment).commit();
+//        }
+        if (youtubeFragment != null) {
+            getSupportFragmentManager().beginTransaction().remove(youtubeFragment).commit();
         }
+
         if (authFragment != null) {
             authFragment.dismiss();
         }
