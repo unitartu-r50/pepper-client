@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
+import android.net.http.SslError;
 import android.os.Bundle;
 
 import com.aldebaran.qi.sdk.QiSDK;
@@ -19,6 +20,7 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -76,13 +78,14 @@ public class SessionActivity extends RobotActivity implements CommunicationServi
         webView.getSettings().setDomStorageEnabled(true);
         webView.setVisibility(View.INVISIBLE);
         // adding a web view client in order to open new links in the same view
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                view.loadUrl(request.getUrl().toString());
-                return false;
-            }
-        });
+//        webView.setWebViewClient(new WebViewClient() {
+//            @Override
+//            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+//                view.loadUrl(request.getUrl().toString());
+//                return false;
+//            }
+//        });
+        webView.setWebViewClient(new WebViewClient() {@Override public void onReceivedSslError(WebView v, SslErrorHandler handler, SslError er){ handler.proceed(); }});
         // adding a web chrome client in order to allow full screen video
         webView.setWebChromeClient(new FullScreenVideoChromeClient());
 
